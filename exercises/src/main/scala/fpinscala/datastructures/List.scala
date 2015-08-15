@@ -89,4 +89,57 @@ object List { // `List` companion object. Contains functions for creating and wo
     case Cons(x,xs) => Cons(f(x), map(xs)(f))
     case Nil => Nil
   }
+
+  // or with foldRight 
+  def map1[A,B](l: List[A])(f: A => B): List[B] = foldRight(l,Nil:List[B])((x,xs)=>Cons(f(x),xs)) 
+
+  // not signatures in file
+  def reverse[A](l:List[A]):List[A]= foldLeft(l,Nil:List[A])( (xs,x) => Cons(x,xs))
+
+  //foldRight based on fold left 
+  def foldRight1[A,B](l:List[A],z:B)(f:(A,B)=>B):B= foldLeft(l,(x:B)=>x )((g,x)=>(a)=>g (f(x,a)))(z)  // see http://www.cs.nott.ac.uk/~gmh/fold.pdf  
+
+  //foldLeft based on fold right
+  def foldLeft1[A,B](l:List[A],z:B)(f:(B,A)=>B):B=foldRight(l,(x:B)=>x )((x,g)=>(a)=>g (f(a,x)))(z) //see http://www.cs.nott.ac.uk/~gmh/fold.pdf
+
+  def append1[A](l1:List[A], l2:List[A]) = foldRight(l1,l2)(Cons(_,_))
+
+  def flatten[A](ls:List[List[A]]):List[A] = foldLeft(ls,Nil:List[A])(append(_,_)) // O(...) ?
+
+  def flatMap[A,B](ls:List[A])(f:A=>List[B]):List[B] = foldRight(ls,Nil:List[B])((a,acc)=>append(f(a), acc))
+
+  // w/o map for pedagogical purposes
+  def addOne(l:List[Int]):List[Int] = l match {
+    case Cons(x,xs) => Cons(x+1, addOne(xs))
+    case Nil => Nil
+  }
+
+  // w/o map for pedagogical purposes
+  def toString(l:List[Double]):List[String] = l match {
+    case Cons(x,xs) => Cons(x.toString, toString(xs))
+    case Nil => Nil
+  }
+
+  //filter with flatMap
+  def filter[A](l:List[A])(f:A=>Boolean):List[A] = flatMap(l)(x => if (f(x)) Cons(x,Nil) else Nil )
+
+  //assumes l1.length == l2.length 
+  def sum(l1: List[Int], l2: List[Int]):List[Int]= (l1,l2) match {
+    case (Cons(e1,es1), Cons(e2,es2)) => Cons(e1+e2, sum(es1,es2))
+    case (Nil,Nil) => Nil
+  }
+
+  def zipWith[A,B,C](l1: List[A], l2: List[B])(f:(A,B)=>C):List[C]= (l1,l2) match {
+    case (Cons(e1,es1), Cons(e2,es2)) => Cons(f(e1,e2), zipWith(es1,es2)(f))
+    case (Nil,Nil) => Nil
+  }
+
+  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = (sup,sub) match {
+    case (Cons(sup1,sups1), Cons(sub1,subs1)) => (sup1 == sub1) && hasSubsequence(sups1,subs1)
+    case (Cons(_, _), Nil) => true 
+    case (Nil, Cons(_, _)) => false
+    case (Nil,Nil) => true
+  }
+
+
 }
