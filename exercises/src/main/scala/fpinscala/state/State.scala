@@ -43,6 +43,9 @@ object RNG {
     (d,rng1)
   }
 
+  //with map
+  def double1(rng: RNG): (Double, RNG) = map(int)(_/ Int.MaxValue.toDouble)(rng)
+
   def intDouble(rng: RNG): ((Int,Double), RNG) = {
     val (i,rng1) = rng.nextInt
     val (d,rng2) = double(rng1)
@@ -96,15 +99,47 @@ object RNG {
     g(a)(rng1)
   }
 
+  // adapted from the book
+  def nonNegativeLessThan(n: Int): Rand[Int] = 
+    flatMap(nonNegativeInt _ )( i => {
+      val mod = i % n
+      if (i + (n-1) - mod >= 0) unit(mod)
+      else nonNegativeLessThan(n)
+      })
+
+  //using flatMap
+  def map_1[A,B](s: Rand[A])(f: A => B): Rand[B] = flatMap(s)(a => unit(f(a)))
+  def map2_1[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = flatMap(ra)(a => map_1(rb)(b => f(a,b)))
+
 }
 
 case class State[S,+A](run: S => (A, S)) {
-  def map[B](f: A => B): State[S, B] =
-    sys.error("todo")
+
+  def map[B](f: A => B): State[S, B] = State(
+    s => {
+      val (a,newS) = run(s)
+      (f(a), newS)
+    }
+  )
+
   def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C] =
-    sys.error("todo")
+    State(
+      s => {
+        val (a,newS1) = run(s)
+        val (b,newS2) = sb.run(newS1)
+        (f(a,b), newS2)
+      }
+    )
+
+
   def flatMap[B](f: A => State[S, B]): State[S, B] =
-    sys.error("todo")
+    State(
+      s => {
+        val (a,newS1) = run(s)
+        val (b,newS2) = f(a).run(newS1)
+        (b, newS2)
+      }
+    )
 }
 
 sealed trait Input
@@ -114,6 +149,20 @@ case object Turn extends Input
 case class Machine(locked: Boolean, candies: Int, coins: Int)
 
 object State {
+
+  //ORDERING OF STATE THREADING IS WRONG!!!!!!!!!!!!!!!!!!
+  def sequence[S,A](fs: List[State[S,A]]): State[S,List[A]] = State(s => fs.foldRight((Nil:List[A], s))((state,acc) => { 
+      val (xs,s1) = acc
+      val (x,s2) = state.run(s1)
+      (x::xs,s2)
+    } )
+  )
+
   type Rand[A] = State[RNG, A]
-  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
+  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = 
+  inputs.foldLeft()( (s,i) => flatMap(s)(i match {
+        case Coin if s.locked && s.candies >0 => Machine
+      }
+    )
+  )
 }
