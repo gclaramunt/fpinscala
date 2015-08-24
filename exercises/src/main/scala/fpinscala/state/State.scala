@@ -30,23 +30,72 @@ object RNG {
       (f(a), rng2)
     }
 
-  def nonNegativeInt(rng: RNG): (Int, RNG) = ???
+  def nonNegativeInt(rng: RNG): (Int, RNG) ={
+    val (i,rng1) = rng.nextInt
+    val r=  if (i == Int.MinValue) Int.MaxValue
+            else math.abs(i)
+    (r,rng1)
+  }
 
-  def double(rng: RNG): (Double, RNG) = ???
+  def double(rng: RNG): (Double, RNG) = {
+    val (n,rng1) = rng.nextInt
+    val d = n.toDouble / Int.MaxValue.toDouble
+    (d,rng1)
+  }
 
-  def intDouble(rng: RNG): ((Int,Double), RNG) = ???
+  def intDouble(rng: RNG): ((Int,Double), RNG) = {
+    val (i,rng1) = rng.nextInt
+    val (d,rng2) = double(rng1)
+    ((i,d),rng2)
+  }
 
-  def doubleInt(rng: RNG): ((Double,Int), RNG) = ???
+  def doubleInt(rng: RNG): ((Double,Int), RNG) = {
+    val (d,rng1) = double(rng) 
+    val (i,rng2) = rng1.nextInt
+    ((d,i),rng2)
+  }
 
-  def double3(rng: RNG): ((Double,Double,Double), RNG) = ???
+  //give me the monad already!
+  def double3(rng: RNG): ((Double,Double,Double), RNG) = {
+    val (d1,rng1) = double(rng) 
+    val (d2,rng2) = double(rng1) 
+    val (d3,rng3) = double(rng2) 
+    ((d1,d2,d3),rng3)
+  }
+  
+  def ints(count: Int)(rng: RNG): (List[Int], RNG) = 
+    if (count ==0) (Nil, rng)
+    else {
+      val (i,rng1) = rng.nextInt
+      val (is,rng2) = ints(count-1)(rng1)
+      (i :: is, rng2) 
+    }
 
-  def ints(count: Int)(rng: RNG): (List[Int], RNG) = ???
+  def ints1(count: Int)(rng: RNG): (List[Int], RNG) = 
+    (1 to count).foldLeft((Nil:List[Int], rng))((acc,_) => { 
+      val (xs,rng1) = acc
+      val (x,rng2) = rng1.nextInt
+      (x::xs,rng2)
+    } )
 
-  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = ???
+  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = 
+    rng => {
+      val (a,rng1) = ra(rng)
+      val (b,rng2) = rb(rng1)
+      (f(a,b), rng2)
+    }
 
-  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = ???
+  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = rng => fs.foldRight((Nil:List[A], rng))((rand,acc) => { 
+      val (xs,rng1) = acc
+      val (x,rng2) = rand(rng1)
+      (x::xs,rng2)
+    } )
 
-  def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = ???
+  def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = rng => {
+    val (a,rng1)=f(rng)
+    g(a)(rng1)
+  }
+
 }
 
 case class State[S,+A](run: S => (A, S)) {
