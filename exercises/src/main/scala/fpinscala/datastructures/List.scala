@@ -100,7 +100,7 @@ object List { // `List` companion object. Contains functions for creating and wo
   def foldRight1[A,B](l:List[A],z:B)(f:(A,B)=>B):B= foldLeft(l,(x:B)=>x )((g,x)=>(a)=>g (f(x,a)))(z)  // see http://www.cs.nott.ac.uk/~gmh/fold.pdf  
 
   //foldLeft based on fold right
-  def foldLeft1[A,B](l:List[A],z:B)(f:(B,A)=>B):B=foldRight(l,(x:B)=>x )((x,g)=>(a)=>g (f(a,x)))(z) //see http://www.cs.nott.ac.uk/~gmh/fold.pdf
+  def foldLeft1[A, B](l: List[A], z: B)(f: (B, A) => B): B = foldRight(l, (x: B) => x)((x, g) => a => g(f(a, x)))(z) //see http://www.cs.nott.ac.uk/~gmh/fold.pdf
 
   def append1[A](l1:List[A], l2:List[A]) = foldRight(l1,l2)(Cons(_,_))
 
@@ -127,18 +127,24 @@ object List { // `List` companion object. Contains functions for creating and wo
   def sum(l1: List[Int], l2: List[Int]):List[Int]= (l1,l2) match {
     case (Cons(e1,es1), Cons(e2,es2)) => Cons(e1+e2, sum(es1,es2))
     case (Nil,Nil) => Nil
+    case _ => sys.error("lists of different length")
   }
+
 
   def zipWith[A,B,C](l1: List[A], l2: List[B])(f:(A,B)=>C):List[C]= (l1,l2) match {
     case (Cons(e1,es1), Cons(e2,es2)) => Cons(f(e1,e2), zipWith(es1,es2)(f))
     case (Nil,Nil) => Nil
+    case _ => sys.error("lists of different length")
   }
 
-  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = (sup,sub) match {
-    case (Cons(sup1,sups1), Cons(sub1,subs1)) => (sup1 == sub1) && hasSubsequence(sups1,subs1)
-    case (Cons(_, _), Nil) => true 
-    case (Nil, Cons(_, _)) => false
-    case (Nil,Nil) => true
+  def hasSubsequence[A](list: List[A], subseq: List[A]): Boolean ={
+    def hasSubsequenceRec[A](sup: List[A], sub: List[A]): Boolean = (sup,sub) match {
+      case (Cons(sup1,sups1), Cons(sub1,subs1)) => (sup1 == sub1) && hasSubsequenceRec(sups1,subs1) || hasSubsequenceRec(sups1, subseq)
+      case (Cons(_, _), Nil) => true   
+      case (Nil, Cons(_, _)) => false 
+      case (Nil,Nil) => true 
+    }
+    hasSubsequenceRec(list, subseq)
   }
 
 
