@@ -109,9 +109,8 @@ object Stream {
   }
 
   def takeWhile[A,B](s: Stream[A])(p: A => Boolean): Stream[A] = unfold((s,true)) { 
-    case (_,false)  => None
-    case (Empty,true) => None
     case (Cons(a,st), true) => Some((a(),(st(),p(a()))))  
+    case _ => None
   }
 
   def zipWith[A,B,C](s1: Stream[A],s2: Stream[B])(f: (A,B) => C): Stream[C] = unfold((s1,s2)) { 

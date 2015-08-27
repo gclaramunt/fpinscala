@@ -150,19 +150,37 @@ case class Machine(locked: Boolean, candies: Int, coins: Int)
 
 object State {
 
-  //ORDERING OF STATE THREADING IS WRONG!!!!!!!!!!!!!!!!!!
-  def sequence[S,A](fs: List[State[S,A]]): State[S,List[A]] = State(s => fs.foldRight((Nil:List[A], s))((state,acc) => { 
-      val (xs,s1) = acc
-      val (x,s2) = state.run(s1)
-      (x::xs,s2)
-    } )
-  )
+  def sequence[S,A](fs: List[State[S,A]]): State[S,List[A]] = State(s => {
+    val (as,finalS)=fs.foldLeft((Vector.empty[A], s))((acc,state) => {   
+        val (xs,s1) = acc
+        val (x,s2) = state.run(s1)
+        (xs:+x,s2)
+      } )
+   (as.toList,finalS) 
+  })
 
   type Rand[A] = State[RNG, A]
-  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = 
-  inputs.foldLeft()( (s,i) => flatMap(s)(i match {
-        case Coin if s.locked && s.candies >0 => Machine
+
+/*
+ Inserting a coin into a locked machine will cause it to unlock if there’s any
+ candy left.
+ 
+ Turning the knob on an unlocked machine will cause it to dispense candy and
+ become locked.
+ 
+ Turning the knob on a locked machine or inserting a coin into an unlocked
+ machine does nothing.
+ 
+ A machine that’s out of candy ignores all inputs.
+*/
+
+  def transition(i:Input)(m:Machine): ((Int,Int),Machine) = i match {
+        case Coin if m.locked && m.candies >0 => ((m.candies, m.coins+1),Machine(true, m.candies, m.coins+1))
+        case Turn if !m.locked => ((m.candies-1, m.coins),Machine(false,m.candies-1,m.coins))
+        case _ => ((m.candies, m.coins),Machine(false,m.candies,m.coins)) 
       }
-    )
-  )
+
+  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = 
+    inputs.foldLeft(State( (s:Machine) => ((10,1),Machine(true,10,1))))( (s,i) => s.flatMap(x => State(transition(i) _ )))
+  
 }
